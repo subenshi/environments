@@ -1,0 +1,61 @@
+version: "3.6"
+services:
+  mongodb:
+    image: mongo:5.0.3
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    networks:
+      - subenshi_backbone
+  nats:
+    image: nats
+    ports:
+      - 4222:4222
+    command: ["-p", "4222"]
+    networks:
+      - subenshi_backbone
+
+  postgres:
+    image: postgres:15.2
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: keycloak_database_name
+      POSTGRES_USER: keycloak_database_username
+      POSTGRES_PASSWORD: keycloak_database_password
+    networks:
+      - subenshi_keycloack
+
+  keycloak:
+    depends_on:
+      - postgres
+    environment:
+      DB_VENDOR: postgres
+      DB_ADDR: postgres
+      DB_DATABASE: keycloak_database_name
+      DB_USER: keycloak_database_username
+      DB_PASSWORD: keycloak_database_password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME_STRICT: "false"
+    image: quay.io/keycloak/keycloak:21.0.1
+    command: start-dev
+    ports:
+      - target: 8080
+        published: 28080
+        mode: host
+    restart: unless-stopped
+    networks:
+      - subenshi_keycloack
+
+volumes:
+  mongodb_data:
+  postgres_data:
+
+networks:
+  subenshi_keycloack:
+  subenshi_backbone:
+    external: true
